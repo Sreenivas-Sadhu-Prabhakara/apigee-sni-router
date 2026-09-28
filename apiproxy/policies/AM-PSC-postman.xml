@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Route backend B via PSC: /get path -> neg-postman (now httpbingo.org, a Host-agnostic
+     live echo on a distinct domain — postman-echo.com was swapped out because its Cloudflare
+     front enforces Host and the PSC target is always the LB IP). -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-PSC-postman">
+  <DisplayName>AM-PSC-postman</DisplayName>
+  <AssignVariable><Name>target.url</Name><Value>https://httpbingo.org/get</Value></AssignVariable>
+  <Set>
+    <Headers><Header name="Host">httpbingo.org</Header></Headers>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

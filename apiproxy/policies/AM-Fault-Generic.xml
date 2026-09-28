@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 500 catch-all (DefaultFaultRule) for any fault not matched by a specific rule. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Generic">
+  <DisplayName>AM-Fault-Generic</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"internal_error","message":"An unexpected error occurred in the gateway.","code":500,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>500</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

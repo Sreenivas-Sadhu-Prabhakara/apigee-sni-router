@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Scope authorization for backend B. Requires scope "read:b". -->
+<OAuthV2 continueOnError="false" enabled="true" name="OA-VerifyScope-B">
+  <DisplayName>OA-VerifyScope-B</DisplayName>
+  <Operation>VerifyAccessToken</Operation>
+  <Scope>read:b</Scope>
+  <ExternalAuthorization>false</ExternalAuthorization>
+  <GenerateResponse enabled="false"/>
+</OAuthV2>

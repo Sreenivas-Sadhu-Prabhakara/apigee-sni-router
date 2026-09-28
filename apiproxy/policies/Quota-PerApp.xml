@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Per-app request cap keyed on client_id (set by both VerifyAPIKey and
+     VerifyAccessToken). Limit/interval/timeunit are pulled DYNAMICALLY from the
+     API Product the key belongs to (the *Ref attributes); the literal values are
+     the fallback when the refs don't resolve (e.g. OAuth path where VerifyAPIKey
+     didn't run). Violation -> fault.name "QuotaViolation" -> HTTP 429. -->
+<Quota continueOnError="false" enabled="true" name="Quota-PerApp" type="calendar">
+  <DisplayName>Quota-PerApp</DisplayName>
+  <Identifier ref="client_id"/>
+  <Allow count="1000" countRef="verifyapikey.VerifyAPIKey.apiproduct.developer.quota.limit"/>
+  <Interval ref="verifyapikey.VerifyAPIKey.apiproduct.developer.quota.interval">1</Interval>
+  <TimeUnit ref="verifyapikey.VerifyAPIKey.apiproduct.developer.quota.timeunit">minute</TimeUnit>
+  <StartTime>2026-01-01 00:00:00</StartTime>
+  <Distributed>true</Distributed>
+  <Synchronous>true</Synchronous>
+</Quota>

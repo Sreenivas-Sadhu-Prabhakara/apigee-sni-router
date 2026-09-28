@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Sets flow.backend (a|b|c|none) from X-Route > Host > path. Both routing and
+     authorization read flow.backend so they cannot disagree. -->
+<Javascript continueOnError="false" enabled="true" timeLimit="200" name="JS-ComputeBackend">
+  <DisplayName>JS-ComputeBackend</DisplayName>
+  <ResourceURL>jsc://compute-route.js</ResourceURL>
+</Javascript>

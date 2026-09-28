@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Root manifest. The child listing elements (<Policies>/<ProxyEndpoints>/
+     <TargetEndpoints>) are optional UI conveniences: Apigee discovers everything
+     from the policies/, proxies/ and targets/ directories at import time. -->
+<APIProxy revision="1" name="sni-router-v1">
+  <DisplayName>SNI Router v1</DisplayName>
+  <Description>One proxy, three backends on three domains (httpbin.org / postman-echo.com / mocktarget.apigee.net) via host, path and header routing, with API key + OAuth2 + JWT auth, scope/product authorization, quota, spike arrest, JSON threat protection and CORS.</Description>
+</APIProxy>

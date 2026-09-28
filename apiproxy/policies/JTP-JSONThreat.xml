@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Structural limits on inbound JSON. Only executes when Content-Type is
+     application/json. On breach -> jsonattack.JTP-JSONThreat.failed=true. -->
+<JSONThreatProtection continueOnError="false" enabled="true" name="JTP-JSONThreat">
+  <DisplayName>JTP-JSONThreat</DisplayName>
+  <ArrayElementCount>20</ArrayElementCount>
+  <ContainerDepth>10</ContainerDepth>
+  <ObjectEntryCount>15</ObjectEntryCount>
+  <ObjectEntryNameLength>50</ObjectEntryNameLength>
+  <StringValueLength>500</StringValueLength>
+  <Source>request</Source>
+</JSONThreatProtection>

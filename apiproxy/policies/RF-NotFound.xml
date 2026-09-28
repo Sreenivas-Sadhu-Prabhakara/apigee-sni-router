@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Raised for an unknown path so the 404 is built in the FAULT flow (where a custom
+     StatusCode reliably sticks). An AssignMessage in the request flow leaves the status
+     at 200 on a targetless route, so we route the 404 through fault handling instead. -->
+<RaiseFault continueOnError="false" enabled="true" name="RF-NotFound">
+  <DisplayName>RF-NotFound</DisplayName>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <FaultResponse/>
+</RaiseFault>

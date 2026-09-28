@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Validates the HS256 JWT presented as "Authorization: Bearer <token>" (default
+     source; Bearer prefix auto-stripped). Issuer/Audience are match-checks: a
+     mismatch throws steps.jwt.JwtIssuerMismatch / JwtAudienceMismatch. On success
+     it populates jwt.VerifyJWT-HS256.* (valid, claims, seconds_remaining, ...). -->
+<VerifyJWT continueOnError="false" enabled="true" name="VerifyJWT-HS256">
+  <DisplayName>VerifyJWT-HS256</DisplayName>
+  <Algorithm>HS256</Algorithm>
+  <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
+  <SecretKey>
+    <Value ref="private.secretkey"/>
+  </SecretKey>
+  <Issuer>urn://sni-router</Issuer>
+  <Audience>sni-router-clients</Audience>
+</VerifyJWT>

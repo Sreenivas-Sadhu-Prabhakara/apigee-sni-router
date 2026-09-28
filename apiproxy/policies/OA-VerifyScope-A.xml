@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Scope authorization for backend A. Re-verifies the bearer token and requires
+     scope "read:a". Missing scope -> fault.name "InsufficientScope" -> 403.
+     Only runs for bearer requests (see the Step condition in proxies/default.xml). -->
+<OAuthV2 continueOnError="false" enabled="true" name="OA-VerifyScope-A">
+  <DisplayName>OA-VerifyScope-A</DisplayName>
+  <Operation>VerifyAccessToken</Operation>
+  <Scope>read:a</Scope>
+  <ExternalAuthorization>false</ExternalAuthorization>
+  <GenerateResponse enabled="false"/>
+</OAuthV2>

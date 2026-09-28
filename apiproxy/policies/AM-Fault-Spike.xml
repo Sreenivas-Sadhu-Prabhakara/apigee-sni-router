@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 429 for SpikeArrest violations (burst too fast). -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Spike">
+  <DisplayName>AM-Fault-Spike</DisplayName>
+  <Set>
+    <Headers>
+      <Header name="Retry-After">1</Header>
+    </Headers>
+    <Payload contentType="application/json">{"error":"rate_limited","message":"Too many requests too fast. Slow down.","code":429,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>429</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

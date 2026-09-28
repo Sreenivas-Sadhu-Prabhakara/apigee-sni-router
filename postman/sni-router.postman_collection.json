@@ -1,0 +1,126 @@
+{
+  "info": {
+    "name": "SNI Router (Apigee X)",
+    "_postman_id": "sni-router-collection-0001",
+    "description": "One Apigee proxy -> 3 backends (httpbin.org / postman-echo.com / mocktarget.apigee.net) via host, path and X-Route header routing, with API key + OAuth2 client-credentials + HS256 JWT auth, API-Product/scope authorization, quota, spike arrest, JSON threat protection and CORS.\n\nSet appAKey / appBKey / appAllKey / appAllSecret in the environment (from scripts/20-create-authz.sh output or .secrets.env). Run 'OAuth2 > Get access token' and 'JWT > Mint' first — they auto-populate {{accessToken}} and {{jwt}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "No credentials -> 401",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}{{basePath}}/a" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "API key (app-a) on /a -> 200",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAKey}}" } ], "url": "{{baseUrl}}{{basePath}}/a" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('reached httpbin', () => pm.expect(pm.response.text()).to.include('httpbin.org'));" ], "type": "text/javascript" } } ]
+        }
+      ]
+    },
+    {
+      "name": "2. Authorization (Product path scoping)",
+      "item": [
+        {
+          "name": "app-a on /b -> 403 (not authorized)",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAKey}}" } ], "url": "{{baseUrl}}{{basePath}}/b" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('403 Forbidden', () => pm.response.to.have.status(403));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "app-all on /b -> 200",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" } ], "url": "{{baseUrl}}{{basePath}}/b" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('reached postman-echo', () => pm.expect(pm.response.text()).to.include('postman-echo.com'));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "app-all on /c -> 200",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" } ], "url": "{{baseUrl}}{{basePath}}/c" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ], "type": "text/javascript" } } ]
+        }
+      ]
+    },
+    {
+      "name": "3. OAuth2 (client_credentials)",
+      "item": [
+        {
+          "name": "Get access token (Basic app-all)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "basic", "basic": [ { "key": "username", "value": "{{appAllKey}}" }, { "key": "password", "value": "{{appAllSecret}}" } ] },
+            "header": [ { "key": "Content-Type", "value": "application/x-www-form-urlencoded" } ],
+            "body": { "mode": "urlencoded", "urlencoded": [ { "key": "grant_type", "value": "client_credentials" }, { "key": "scope", "value": "read:a read:b read:c" } ] },
+            "url": "{{baseUrl}}{{basePath}}/oauth/token"
+          },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "const t = pm.response.json().access_token;", "pm.expect(t, 'access_token present').to.be.a('string');", "pm.environment.set('accessToken', t);" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Bearer token on /a -> 200",
+          "request": { "method": "GET", "header": [ { "key": "Authorization", "value": "Bearer {{accessToken}}" } ], "url": "{{baseUrl}}{{basePath}}/a" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK (has scope read:a)', () => pm.response.to.have.status(200));" ], "type": "text/javascript" } } ]
+        }
+      ]
+    },
+    {
+      "name": "4. JWT (HS256, self-contained)",
+      "item": [
+        {
+          "name": "Mint JWT (app-all key)",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" } ], "url": "{{baseUrl}}{{basePath}}/jwt/mint" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "const j = pm.response.json().access_token;", "pm.expect(j, 'jwt present').to.be.a('string');", "pm.environment.set('jwt', j);" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Verify valid JWT -> 200",
+          "request": { "method": "GET", "header": [ { "key": "Authorization", "value": "Bearer {{jwt}}" } ], "url": "{{baseUrl}}{{basePath}}/jwt/verify" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('valid=true', () => pm.expect(pm.response.text()).to.include('sni-router-demo-subject'));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Verify garbage JWT -> 401",
+          "request": { "method": "GET", "header": [ { "key": "Authorization", "value": "Bearer not.a.jwt" } ], "url": "{{baseUrl}}{{basePath}}/jwt/verify" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));" ], "type": "text/javascript" } } ]
+        }
+      ]
+    },
+    {
+      "name": "5. Routing",
+      "item": [
+        {
+          "name": "Path /a -> backend A (httpbin)",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAKey}}" } ], "url": "{{baseUrl}}{{basePath}}/a" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('httpbin', () => pm.expect(pm.response.text()).to.include('httpbin.org'));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Header X-Route: b -> backend B (postman)",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" }, { "key": "X-Route", "value": "b" } ], "url": "{{baseUrl}}{{basePath}}/route" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('postman-echo', () => pm.expect(pm.response.text()).to.include('postman-echo.com'));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Host api-c.* -> backend C (needs 40-add-hostnames; -k)",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" }, { "key": "Host", "value": "api-c.8-232-203-178.nip.io" } ], "url": "{{baseUrl}}{{basePath}}/route", "description": "Enable TLS-cert-mismatch tolerance in Postman settings (SSL verification OFF) or use the api-c hostname directly after running scripts/40-add-hostnames.sh." },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 (or SKIP if hostnames not added)', () => pm.expect([200,404]).to.include(pm.response.code));" ], "type": "text/javascript" } } ]
+        }
+      ]
+    },
+    {
+      "name": "6. Errors & limits",
+      "item": [
+        {
+          "name": "Unknown path -> 404",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAllKey}}" } ], "url": "{{baseUrl}}{{basePath}}/nope" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('404', () => pm.response.to.have.status(404));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "Quota trip (run 6x fast with app-a) -> 429",
+          "request": { "method": "GET", "header": [ { "key": "X-API-Key", "value": "{{appAKey}}" } ], "url": "{{baseUrl}}{{basePath}}/a", "description": "product-a is capped at 5/min. Send this 6 times within a minute; the 6th returns 429." },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200 or 429', () => pm.expect([200,429]).to.include(pm.response.code));" ], "type": "text/javascript" } } ]
+        },
+        {
+          "name": "CORS preflight OPTIONS -> 200",
+          "request": { "method": "OPTIONS", "header": [ { "key": "Origin", "value": "https://example.com" }, { "key": "Access-Control-Request-Method", "value": "GET" } ], "url": "{{baseUrl}}{{basePath}}/a" },
+          "event": [ { "listen": "test", "script": { "exec": [ "pm.test('200', () => pm.response.to.have.status(200));", "pm.test('has ACAO header', () => pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.be.true);" ], "type": "text/javascript" } } ]
+        }
+      ]
+    }
+  ]
+}

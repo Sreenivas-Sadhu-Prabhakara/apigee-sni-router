@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Backend A. Outbound TLS SNI is set automatically to the URL host (httpbin.org).
+     copy.pathsuffix=false pins every /a* request to /anything (which echoes method,
+     headers, args, url) so routing is deterministic. success.codes lets httpbin's
+     own status codes pass through; the FaultRule fires only on transport failure. -->
+<TargetEndpoint name="httpbin-target">
+  <PreFlow name="PreFlow"><Request><Step><Name>AM-PSC-httpbin</Name></Step></Request><Response/></PreFlow>
+  <PostFlow name="PostFlow"><Request/><Response/></PostFlow>
+  <Flows/>
+  <FaultRules>
+    <FaultRule name="backend-error">
+      <Step><Name>AM-Fault-BackendError</Name></Step>
+    </FaultRule>
+  </FaultRules>
+  <DefaultFaultRule name="backend-default-fault">
+    <Step><Name>AM-Fault-BackendError</Name></Step>
+  </DefaultFaultRule>
+  <!-- Now routes via PSC to the internal LB (HTTP:80); the LB re-originates HTTPS to httpbin.org. -->
+  <HTTPTargetConnection>
+    <LoadBalancer>
+      <Server name="sb-psc-target"/>
+    </LoadBalancer>
+    <Properties>
+      <Property name="success.codes">1xx,2xx,3xx,4xx,5xx</Property>
+    </Properties>
+  </HTTPTargetConnection>
+</TargetEndpoint>

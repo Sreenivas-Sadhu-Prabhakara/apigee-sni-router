@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Dedicated Apigee X <CORS> policy (current approach; not AssignMessage).
+     GeneratePreflightResponse=true => OPTIONS preflight is answered here and the
+     rest of the request flow is skipped. AllowOrigins is the one required child. -->
+<CORS continueOnError="false" enabled="true" name="CORS-Add">
+  <DisplayName>CORS-Add</DisplayName>
+  <AllowOrigins>{request.header.origin}</AllowOrigins>
+  <AllowMethods>GET, POST, PUT, DELETE, OPTIONS</AllowMethods>
+  <AllowHeaders>origin, x-requested-with, accept, content-type, authorization, x-api-key, x-route</AllowHeaders>
+  <ExposeHeaders>*</ExposeHeaders>
+  <MaxAge>3628800</MaxAge>
+  <AllowCredentials>false</AllowCredentials>
+  <GeneratePreflightResponse>true</GeneratePreflightResponse>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+</CORS>

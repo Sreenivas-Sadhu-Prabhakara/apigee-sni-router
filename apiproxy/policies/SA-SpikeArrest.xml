@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Burst protection. Runs FIRST in PreFlow, before auth (fail fast + cheap).
+     Global rate (no <Identifier>) so a parallel burst deterministically trips it;
+     normal sequential tests (~1-2/s) stay well under 15/s.
+     Violation -> fault.name "SpikeArrestViolation" -> HTTP 429. -->
+<SpikeArrest continueOnError="false" enabled="true" name="SA-SpikeArrest">
+  <DisplayName>SA-SpikeArrest</DisplayName>
+  <Rate>15ps</Rate>
+</SpikeArrest>

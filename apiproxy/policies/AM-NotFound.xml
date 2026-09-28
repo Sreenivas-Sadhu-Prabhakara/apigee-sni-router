@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Sets a 404 JSON response for any path that isn't a known route. Runs in the
+     NotFound flow; the default (targetless) RouteRule then returns this response. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-NotFound">
+  <DisplayName>AM-NotFound</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"not_found","message":"No route matches this path. Try /a, /b, /c, /oauth/token, /jwt/mint or /jwt/verify.","code":404,"path":"{proxy.pathsuffix}"}</Payload>
+    <StatusCode>404</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

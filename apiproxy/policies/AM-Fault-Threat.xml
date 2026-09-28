@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 400 for JSON threat-protection breaches (oversized/too-deep JSON). -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Threat">
+  <DisplayName>AM-Fault-Threat</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"bad_request","message":"Request JSON exceeded structural limits (threat protection).","code":400,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>400</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

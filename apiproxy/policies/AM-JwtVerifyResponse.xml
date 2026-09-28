@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Echoes the validated JWT's claims back as JSON at /jwt/verify. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-JwtVerifyResponse">
+  <DisplayName>AM-JwtVerifyResponse</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"valid":"{jwt.VerifyJWT-HS256.valid}","subject":"{jwt.VerifyJWT-HS256.claim.subject}","issuer":"{jwt.VerifyJWT-HS256.claim.issuer}","audience":"{jwt.VerifyJWT-HS256.claim.audience}","role":"{jwt.VerifyJWT-HS256.claim.role}","seconds_remaining":"{jwt.VerifyJWT-HS256.seconds_remaining}"}</Payload>
+    <StatusCode>200</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 429 for Quota violations. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Quota">
+  <DisplayName>AM-Fault-Quota</DisplayName>
+  <Set>
+    <Headers>
+      <Header name="Retry-After">60</Header>
+    </Headers>
+    <Payload contentType="application/json">{"error":"quota_exceeded","message":"Your application has exceeded its request quota.","code":429,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>429</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Remove BOTH credentials before the request is forwarded to any backend, so
+     neither the API key nor the bearer token ever leaves Apigee (the 3 backends are
+     third-party echo services that log/reflect headers). Runs in PreFlow AFTER authn,
+     so authn/authz still saw them. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-StripCreds">
+  <DisplayName>AM-StripCreds</DisplayName>
+  <Remove>
+    <Headers>
+      <Header name="x-api-key"/>
+      <Header name="Authorization"/>
+    </Headers>
+  </Remove>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

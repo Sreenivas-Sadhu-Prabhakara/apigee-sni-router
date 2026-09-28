@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SNI Router Commands</title>
+<meta name="description" content="Every gcloud + REST command to build the Apigee X SNI-routing proxy and the GCP PSC / L4 SNI-router tiers.">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#0b0f14; --border:#30363d; --text:#e6edf3;
+    --muted:#9198a1; --accent:#58a6ff; --accent2:#3fb950; --code:#e6edf3; --btn:#21262d; --btnh:#30363d;
+    --tag:#1f6feb33; --tagtx:#79c0ff;
+  }
+  @media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+    --bg:#ffffff; --panel:#f6f8fa; --panel2:#eef1f4; --border:#d0d7de; --text:#1f2328;
+    --muted:#59636e; --accent:#0969da; --accent2:#1a7f37; --code:#1f2328; --btn:#f6f8fa; --btnh:#eaeef2;
+    --tag:#ddf4ff; --tagtx:#0550ae;
+  }}
+  :root[data-theme="light"]{
+    --bg:#ffffff; --panel:#f6f8fa; --panel2:#eef1f4; --border:#d0d7de; --text:#1f2328;
+    --muted:#59636e; --accent:#0969da; --accent2:#1a7f37; --code:#1f2328; --btn:#f6f8fa; --btnh:#eaeef2;
+    --tag:#ddf4ff; --tagtx:#0550ae;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 16px 80px}
+  header{padding:32px 0 8px}
+  h1{font-size:1.7rem;margin:0 0 6px} .sub{color:var(--muted);margin:0 0 4px}
+  .chip{display:inline-block;background:var(--tag);color:var(--tagtx);border-radius:999px;
+    padding:2px 10px;font-size:.72rem;font-weight:600;margin:2px 6px 2px 0}
+  nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);
+    padding:10px 0;margin:12px 0 8px;z-index:5;display:flex;flex-wrap:wrap;gap:6px}
+  nav a{font-size:.8rem;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:3px 9px}
+  nav a:hover{color:var(--text);text-decoration:none;background:var(--panel)}
+  h2{font-size:1.15rem;margin:34px 0 4px;padding-top:8px;scroll-margin-top:56px}
+  h2 .n{color:var(--accent2);font-variant-numeric:tabular-nums}
+  .note{color:var(--muted);font-size:.9rem;margin:2px 0 12px}
+  .callout{border-left:3px solid var(--accent2);background:var(--panel);border-radius:0 8px 8px 0;
+    padding:10px 14px;margin:12px 0;font-size:.9rem}
+  .callout.warn{border-left-color:#d29922}
+  .block{border:1px solid var(--border);border-radius:10px;margin:12px 0;overflow:hidden;background:var(--panel)}
+  .block .bh{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--border)}
+  .block .bt{font-size:.82rem;color:var(--muted);font-weight:600}
+  .copy{cursor:pointer;border:1px solid var(--border);background:var(--btn);color:var(--text);
+    border-radius:6px;padding:4px 12px;font-size:.78rem;font-weight:600;white-space:nowrap}
+  .copy:hover{background:var(--btnh)} .copy.ok{color:var(--accent2);border-color:var(--accent2)}
+  pre{margin:0;padding:12px 14px;overflow-x:auto;background:var(--panel2)}
+  code{font:13px/1.5 ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;color:var(--code);white-space:pre}
+  .toggle{position:fixed;right:14px;bottom:14px;border:1px solid var(--border);background:var(--panel);
+    color:var(--text);border-radius:999px;padding:8px 14px;font-size:.8rem;cursor:pointer}
+  footer{color:var(--muted);font-size:.82rem;margin-top:40px;border-top:1px solid var(--border);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SNI Routing on Apigee X + GCP — command reference</h1>
+    <p class="sub">Every <code>gcloud</code> command (and the REST calls the SDK can't do) to build the whole thing, by tier. Hover a block and hit <b>Copy</b>.</p>
+    <div>
+      <span class="chip">Apigee X</span><span class="chip">PSC</span><span class="chip">Internal App LB</span>
+      <span class="chip">L4 proxy NLB + TLS routes</span><span class="chip">Internet / Hybrid NEG</span><span class="chip">Cloud DNS</span>
+    </div>
+  </header>
+
+  <nav id="nav"></nav>
+
+  <h2 id="vars"><span class="n">§</span> Common vars &amp; APIs</h2>
+  <p class="note">Run once per shell. Apigee org == GCP project id (1:1).</p>
+  <script type="text/plain" class="cmd" data-title="Environment variables">export PROJECT=apigee-neg-psc
+export PNUM="$(gcloud projects describe $PROJECT --format='value(projectNumber)')"
+export REGION=asia-south1
+export ORG=apigee-neg-psc
+export ENV=eval
+export NET=sni-psc-net
+export TOKEN="$(gcloud auth print-access-token)"
+gcloud config set project $PROJECT</script>
+  <script type="text/plain" class="cmd" data-title="Enable required APIs">gcloud services enable compute.googleapis.com apigee.googleapis.com \
+  networkservices.googleapis.com dns.googleapis.com --project=$PROJECT</script>
+
+  <h2 id="apigee"><span class="n">0.</span> Apigee L7 SNI-routing proxy</h2>
+  <p class="note">No gcloud for Apigee proxies — management API (or apigeecli). Bundle = a zip whose top dir is <code>apiproxy/</code>.</p>
+  <script type="text/plain" class="cmd" data-title="Import bundle + deploy revision">zip -qr bundle.zip apiproxy
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: multipart/form-data" \
+  --form "file=@bundle.zip" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/apis?name=sni-router-v1&action=import"
+# read "revision": N from the response, then:
+curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/environments/$ENV/apis/sni-router-v1/revisions/N/deployments?override=true"</script>
+  <script type="text/plain" class="cmd" data-title="API Product (path authz) + Developer + App">curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/apiproducts" -d '{
+    "name":"sni-product-a","approvalType":"auto","environments":["'"$ENV"'"],
+    "proxies":["sni-router-v1"],"apiResources":["/a","/a/**"],"scopes":["read:a"],
+    "quota":"5","quotaInterval":"1","quotaTimeUnit":"minute",
+    "attributes":[{"name":"backends","value":"a"}]}'
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/developers" \
+  -d '{"email":"sni-dev@example.com","firstName":"Sni","lastName":"Dev","userName":"sni-dev@example.com"}'
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/developers/sni-dev@example.com/apps" \
+  -d '{"name":"sni-app-a","apiProducts":["sni-product-a"]}'</script>
+
+  <h2 id="applb"><span class="n">1.</span> App-LB PSC tier (Apigee → PSC → internal App LB → Internet NEG → origin)</h2>
+  <p class="note">The documented, working "Apigee over PSC to internet origins" path.</p>
+  <script type="text/plain" class="cmd" data-title="VPC + subnets (regular / proxy-only / PSC-NAT)">gcloud compute networks create $NET --subnet-mode=custom
+gcloud compute networks subnets create sni-lb-subnet --network=$NET --range=10.50.0.0/24 --region=$REGION
+gcloud compute networks subnets create sni-proxy-only --network=$NET --range=10.50.1.0/24 --region=$REGION \
+  --purpose=REGIONAL_MANAGED_PROXY --role=ACTIVE
+gcloud compute networks subnets create sni-psc-nat --network=$NET --range=10.50.2.0/28 --region=$REGION \
+  --purpose=PRIVATE_SERVICE_CONNECT</script>
+  <script type="text/plain" class="cmd" data-title="Cloud NAT (MANDATORY for the proxy-only subnet to reach public origins) + firewall">gcloud compute routers create sni-psc-router --network=$NET --region=$REGION
+gcloud beta compute routers nats create sni-psc-nat-gw --router=sni-psc-router --region=$REGION \
+  --endpoint-types=ENDPOINT_TYPE_MANAGED_PROXY_LB --nat-custom-subnet-ip-ranges=sni-proxy-only \
+  --auto-allocate-nat-external-ips
+gcloud compute firewall-rules create sni-psc-allow-ingress --network=$NET --direction=INGRESS \
+  --action=ALLOW --rules=tcp:80 --source-ranges=10.50.2.0/28,10.50.1.0/24</script>
+  <script type="text/plain" class="cmd" data-title="Internet NEG + INTERNAL_MANAGED/HTTPS backend service (repeat per origin)">gcloud beta compute network-endpoint-groups create neg-httpbin \
+  --network-endpoint-type=INTERNET_FQDN_PORT --default-port=443 --network=$NET --region=$REGION
+gcloud beta compute network-endpoint-groups update neg-httpbin \
+  --add-endpoint="fqdn=httpbin.org,port=443" --region=$REGION
+gcloud compute backend-services create bs-httpbin \
+  --load-balancing-scheme=INTERNAL_MANAGED --protocol=HTTPS --region=$REGION
+gcloud compute backend-services add-backend bs-httpbin \
+  --network-endpoint-group=neg-httpbin --network-endpoint-group-region=$REGION --region=$REGION</script>
+  <script type="text/plain" class="cmd" data-title="PATH-based URL map + target proxy + internal forwarding rule">gcloud compute url-maps create sni-psc-urlmap2 --default-service=bs-httpbin --region=$REGION
+gcloud compute url-maps add-path-matcher sni-psc-urlmap2 --path-matcher-name=pm-all \
+  --default-service=bs-httpbin --new-hosts='*' \
+  --path-rules='/anything=bs-httpbin,/anything/*=bs-httpbin,/get=bs-postman,/get/*=bs-postman,/json=bs-mocktgt,/json/*=bs-mocktgt' \
+  --region=$REGION
+gcloud compute target-http-proxies create sni-psc-http-proxy --url-map=sni-psc-urlmap2 --region=$REGION
+gcloud compute forwarding-rules create sni-psc-fr --load-balancing-scheme=INTERNAL_MANAGED \
+  --network=$NET --subnet=sni-lb-subnet --target-http-proxy=sni-psc-http-proxy \
+  --target-http-proxy-region=$REGION --ports=80 --allow-global-access --region=$REGION</script>
+  <script type="text/plain" class="cmd" data-title="Publish via PSC + attach Apigee (endpoint attachment is API-only)">gcloud compute service-attachments create sni-southbound-sa --region=$REGION \
+  --producer-forwarding-rule=sni-psc-fr --connection-preference=ACCEPT_AUTOMATIC --nat-subnets=sni-psc-nat
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/endpointAttachments?endpointAttachmentId=sni-southbound-ea" \
+  -d "{\"location\":\"$REGION\",\"serviceAttachment\":\"projects/$PROJECT/regions/$REGION/serviceAttachments/sni-southbound-sa\"}"
+# poll GET .../endpointAttachments/sni-southbound-ea until state=ACTIVE; note .host (PUPI IP), then:
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://apigee.googleapis.com/v1/organizations/$ORG/environments/$ENV/targetservers" \
+  -d '{"name":"sb-psc-target","host":"PUPI_IP","protocol":"HTTP","port":80,"isEnabled":true}'</script>
+
+  <h2 id="l4"><span class="n">2.</span> True L4 SNI router (internal proxy NLB + TLS routes, TLS-passthrough)</h2>
+  <p class="callout">This SDK's <code>gcloud</code> lacks <code>target-tcp-proxies --load-balancing-scheme</code> and <code>tls-routes import</code> has no <code>targetProxies</code> — so the backend-service-less proxy and the TLS route go through <b>REST</b>.</p>
+  <script type="text/plain" class="cmd" data-title="TCP backend service on an Internet NEG (repeat per origin)">gcloud compute backend-services create bs-tcp-httpbin \
+  --load-balancing-scheme=INTERNAL_MANAGED --protocol=TCP --region=$REGION
+gcloud compute backend-services add-backend bs-tcp-httpbin \
+  --network-endpoint-group=tcp-neg-httpbin --network-endpoint-group-region=$REGION --region=$REGION</script>
+  <script type="text/plain" class="cmd" data-title="Backend-service-less target-tcp-proxy (REST)">curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://compute.googleapis.com/compute/beta/projects/$PROJECT/regions/$REGION/targetTcpProxies" \
+  -d '{"name":"tcp-proxy-sni","proxyHeader":"NONE","loadBalancingScheme":"INTERNAL_MANAGED"}'</script>
+  <script type="text/plain" class="cmd" data-title="TLS route: SNI -> backend service, bound to the target proxy (REST)">curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://networkservices.googleapis.com/v1/projects/$PROJECT/locations/$REGION/tlsRoutes?tlsRouteId=sni-tls-route" \
+  -d "{\"targetProxies\":[\"projects/$PNUM/locations/$REGION/targetTcpProxies/tcp-proxy-sni\"],\"rules\":[
+    {\"matches\":[{\"sniHost\":[\"httpbin.org\"]}],\"action\":{\"destinations\":[{\"serviceName\":\"projects/$PNUM/locations/$REGION/backendServices/bs-tcp-httpbin\"}]}},
+    {\"matches\":[{\"sniHost\":[\"httpbingo.org\"]}],\"action\":{\"destinations\":[{\"serviceName\":\"projects/$PNUM/locations/$REGION/backendServices/bs-tcp-httpbingo\"}]}},
+    {\"matches\":[{\"sniHost\":[\"mocktarget.apigee.net\"]}],\"action\":{\"destinations\":[{\"serviceName\":\"projects/$PNUM/locations/$REGION/backendServices/bs-tcp-mocktgt\"}]}}]}"</script>
+  <script type="text/plain" class="cmd" data-title="Forwarding rule + test from a VPC client">gcloud compute forwarding-rules create tcp-fr --load-balancing-scheme=INTERNAL_MANAGED \
+  --network=$NET --subnet=sni-lb-subnet --address=tcp-lb-ip --target-tcp-proxy=tcp-proxy-sni \
+  --target-tcp-proxy-region=$REGION --ports=443 --region=$REGION
+# from inside the VPC:
+curl --resolve httpbin.org:443:VIP https://httpbin.org/anything</script>
+  <p class="note"><b>Public variant:</b> same, but <code>--load-balancing-scheme=EXTERNAL_MANAGED</code> on the backend services + target proxy, a public <code>--address</code>, and a forwarding rule without a subnet → test from anywhere with <code>curl --resolve &lt;sni&gt;:443:&lt;public-VIP&gt;</code>.</p>
+
+  <h2 id="hybrid"><span class="n">3.</span> Hybrid NEG per host (PSC-eligible; internet NEG is banned behind a PSC-published proxy NLB)</h2>
+  <p class="note">Pin each origin's current public IP — they rotate, so this is demo-grade.</p>
+  <script type="text/plain" class="cmd" data-title="Health check + hybrid NEG + TCP backend service (repeat per origin)">gcloud compute health-checks create tcp hyb-hc --region=$REGION --port=443
+IP=$(dig +short httpbin.org A | head -1)
+gcloud compute network-endpoint-groups create hyb-neg-httpbin \
+  --network-endpoint-type=NON_GCP_PRIVATE_IP_PORT --default-port=443 --network=$NET --zone=$REGION-a
+gcloud compute network-endpoint-groups update hyb-neg-httpbin --add-endpoint="ip=$IP,port=443" --zone=$REGION-a
+gcloud compute backend-services create bs-hyb-httpbin --load-balancing-scheme=EXTERNAL_MANAGED \
+  --protocol=TCP --health-checks=hyb-hc --health-checks-region=$REGION --region=$REGION
+gcloud compute backend-services add-backend bs-hyb-httpbin --network-endpoint-group=hyb-neg-httpbin \
+  --network-endpoint-group-zone=$REGION-a --balancing-mode=CONNECTION --max-connections=1000 --region=$REGION</script>
+
+  <h2 id="dns"><span class="n">4.</span> Private DNS so Apigee sends SNI=FQDN into the L4</h2>
+  <p class="callout warn"><b>Caveat (verified on the trial org):</b> a private zone bound to the authorized network is <b>not</b> resolved by Apigee's managed tenant without explicit DNS peering (a Cloud DNS peering zone + <code>roles/dns.peer</code> for Apigee's service agent). With a plain zone, Apigee resolved the FQDN publicly and bypassed the L4.</p>
+  <script type="text/plain" class="cmd" data-title="Private zone + A record -> L4 PSC IP (repeat per origin)">gcloud dns managed-zones create sni-z-httpbin --dns-name=httpbin.org. --visibility=private --networks=default
+gcloud dns record-sets create httpbin.org. --zone=sni-z-httpbin --type=A --ttl=60 --rrdatas=L4_PUPI_IP
+# Apigee target: an AssignMessage sets target.url=https://httpbin.org/anything so Apigee sends SNI=httpbin.org.</script>
+
+  <h2 id="teardown"><span class="n">×</span> Teardown (reverse dependency order)</h2>
+  <script type="text/plain" class="cmd" data-title="Delete order">gcloud compute forwarding-rules delete ... --region=$REGION
+gcloud compute target-tcp-proxies delete ... --region=$REGION   # and target-http-proxies
+# TLS routes + Apigee endpoint attachments: REST DELETE (same base URLs as create)
+gcloud compute backend-services delete ... --region=$REGION
+gcloud beta compute network-endpoint-groups delete ...          # internet NEGs (--region) / hybrid NEGs (--zone)
+gcloud compute health-checks delete hyb-hc --region=$REGION
+gcloud compute service-attachments delete ... --region=$REGION  # after its endpoint attachment is gone
+gcloud compute addresses delete ... --region=$REGION
+gcloud beta compute routers nats delete sni-psc-nat-gw --router=sni-psc-router --region=$REGION
+gcloud compute routers delete sni-psc-router --region=$REGION
+gcloud compute firewall-rules delete sni-psc-allow-ingress
+gcloud compute networks subnets delete ... --region=$REGION
+gcloud compute networks delete $NET
+gcloud dns record-sets delete FQDN. --zone=... --type=A ; gcloud dns managed-zones delete ...</script>
+
+  <footer>
+    Generated for the <code>apigee-sni-router</code> project. Full runnable scripts live in <code>scripts/</code> and <code>psc/</code>.
+    Replace placeholders (<code>PUPI_IP</code>, <code>VIP</code>, <code>N</code>) with real values. Commands are for a demo trial org — review before production.
+  </footer>
+</div>
+
+<button class="toggle" id="toggle">◐ theme</button>
+<script>
+(function(){
+  // Render each <script type="text/plain" class="cmd"> into a copyable block.
+  document.querySelectorAll('script.cmd').forEach(function(s){
+    var raw = s.textContent.replace(/^\n/,'').replace(/\s+$/,'');
+    var wrap = document.createElement('div'); wrap.className='block';
+    var bh = document.createElement('div'); bh.className='bh';
+    var bt = document.createElement('span'); bt.className='bt'; bt.textContent = s.dataset.title || 'command';
+    var btn = document.createElement('button'); btn.className='copy'; btn.textContent='Copy';
+    btn.addEventListener('click', function(){
+      (navigator.clipboard ? navigator.clipboard.writeText(raw) : Promise.reject()).then(function(){
+        btn.textContent='Copied ✓'; btn.classList.add('ok');
+        setTimeout(function(){btn.textContent='Copy'; btn.classList.remove('ok');},1400);
+      }).catch(function(){
+        var r=document.createRange(); r.selectNode(pre); var sel=getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        try{document.execCommand('copy'); btn.textContent='Copied ✓';}catch(e){btn.textContent='Copy failed';}
+        setTimeout(function(){btn.textContent='Copy';},1400); sel.removeAllRanges();
+      });
+    });
+    bh.appendChild(bt); bh.appendChild(btn);
+    var pre=document.createElement('pre'); var code=document.createElement('code');
+    code.textContent = raw; pre.appendChild(code);
+    wrap.appendChild(bh); wrap.appendChild(pre);
+    s.parentNode.replaceChild(wrap, s);
+  });
+  // Build the nav from the h2 headings.
+  var nav=document.getElementById('nav');
+  document.querySelectorAll('h2[id]').forEach(function(h){
+    var a=document.createElement('a'); a.href='#'+h.id; a.textContent=h.textContent.trim(); nav.appendChild(a);
+  });
+  // Theme toggle (localStorage, wrapped for private-mode safety).
+  var root=document.documentElement, key='sni-theme';
+  try{ var saved=localStorage.getItem(key); if(saved) root.setAttribute('data-theme',saved); }catch(e){}
+  document.getElementById('toggle').addEventListener('click', function(){
+    var next = root.getAttribute('data-theme')==='light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next); try{localStorage.setItem(key,next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

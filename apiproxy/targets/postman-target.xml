@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Backend B. Outbound TLS SNI -> postman-echo.com. Pinned to /get (echoes request). -->
+<TargetEndpoint name="postman-target">
+  <PreFlow name="PreFlow"><Request><Step><Name>AM-PSC-postman</Name></Step></Request><Response/></PreFlow>
+  <PostFlow name="PostFlow"><Request/><Response/></PostFlow>
+  <Flows/>
+  <FaultRules>
+    <FaultRule name="backend-error">
+      <Step><Name>AM-Fault-BackendError</Name></Step>
+    </FaultRule>
+  </FaultRules>
+  <DefaultFaultRule name="backend-default-fault">
+    <Step><Name>AM-Fault-BackendError</Name></Step>
+  </DefaultFaultRule>
+  <!-- Now routes via PSC to the internal LB; the LB re-originates HTTPS to postman-echo.com. -->
+  <HTTPTargetConnection>
+    <LoadBalancer>
+      <Server name="sb-psc-target"/>
+    </LoadBalancer>
+    <Properties>
+      <Property name="success.codes">1xx,2xx,3xx,4xx,5xx</Property>
+    </Properties>
+  </HTTPTargetConnection>
+</TargetEndpoint>

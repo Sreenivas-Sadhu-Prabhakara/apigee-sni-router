@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 401 for JWT validation failures (bad signature, expired, issuer/audience mismatch). -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-JWT">
+  <DisplayName>AM-Fault-JWT</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"invalid_token","message":"JWT validation failed (signature, expiry, issuer or audience).","code":401,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>401</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

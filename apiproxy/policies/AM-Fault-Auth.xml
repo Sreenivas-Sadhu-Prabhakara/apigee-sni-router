@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 401 for authentication failures (missing/invalid key or token). -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Auth">
+  <DisplayName>AM-Fault-Auth</DisplayName>
+  <Set>
+    <Headers>
+      <Header name="WWW-Authenticate">Bearer realm="sni-router", ApiKey header="X-API-Key"</Header>
+    </Headers>
+    <Payload contentType="application/json">{"error":"unauthorized","message":"Valid credentials required: send X-API-Key or Authorization: Bearer.","code":401,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>401</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

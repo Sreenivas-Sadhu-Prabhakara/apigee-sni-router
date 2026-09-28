@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+  <Description>Routes to 3 backends by a single computed flow.backend (X-Route > Host > path); enforces API key / OAuth2 / JWT auth + backend-bound authorization + quota/spike/threat/CORS.</Description>
+
+  <!-- ================= REQUEST PIPELINE (runs on EVERY request) ================= -->
+  <PreFlow name="PreFlow">
+    <Request>
+      <!-- 1. Burst protection first (cheap, before auth). -->
+      <Step><Name>SA-SpikeArrest</Name></Step>
+      <!-- 2. CORS: answers OPTIONS preflight and skips the rest of the request flow. -->
+      <Step><Name>CORS-Add</Name></Step>
+      <!-- 3. Compute the ONE routing/authorization decision. -->
+      <Step><Name>JS-ComputeBackend</Name><Condition>request.verb != "OPTIONS"</Condition></Step>
+      <!-- 4. JSON threat protection (only on JSON write bodies). -->
+      <Step>
+        <Name>JTP-JSONThreat</Name>
+        <Condition>(request.verb = "POST" or request.verb = "PUT") and (request.header.content-type Matches "*json*")</Condition>
+      </Step>
+      <!-- 5a. API-key authn when X-API-Key is present. Excludes /oauth/token (deadlock)
+              and /jwt/verify (validates its own bearer JWT). -->
+      <Step>
+        <Name>VerifyAPIKey</Name>
+        <Condition>proxy.pathsuffix != "/oauth/token" and proxy.pathsuffix != "/jwt/verify" and request.verb != "OPTIONS" and request.header.x-api-key != null</Condition>
+      </Step>
+      <!-- 5b. Bearer-token authn when no API key is present (same exclusions). -->
+      <Step>
+        <Name>OA-VerifyAccessToken</Name>
+        <Condition>proxy.pathsuffix != "/oauth/token" and proxy.pathsuffix != "/jwt/verify" and request.verb != "OPTIONS" and request.header.x-api-key = null</Condition>
+      </Step>
+      <!-- 6. AUTHORIZATION bound to flow.backend (the routed target), not the path.
+              6a. API key: the app's Product must allow this backend (custom attr "backends"). -->
+      <Step>
+        <Name>RF-BackendDenied</Name>
+        <Condition>request.header.x-api-key != null and ((flow.backend = "a" and !(verifyapikey.VerifyAPIKey.apiproduct.backends ~~ "(^|.*,)a(,.*|$)")) or (flow.backend = "b" and !(verifyapikey.VerifyAPIKey.apiproduct.backends ~~ "(^|.*,)b(,.*|$)")) or (flow.backend = "c" and !(verifyapikey.VerifyAPIKey.apiproduct.backends ~~ "(^|.*,)c(,.*|$)")))</Condition>
+      </Step>
+      <!-- 6b. Bearer: token must carry the scope for this backend (read:a/b/c). -->
+      <Step><Name>OA-VerifyScope-A</Name><Condition>flow.backend = "a" and request.header.authorization != null</Condition></Step>
+      <Step><Name>OA-VerifyScope-B</Name><Condition>flow.backend = "b" and request.header.authorization != null</Condition></Step>
+      <Step><Name>OA-VerifyScope-C</Name><Condition>flow.backend = "c" and request.header.authorization != null</Condition></Step>
+      <!-- 7. Per-app quota (needs client_id from step 5). -->
+      <Step>
+        <Name>Quota-PerApp</Name>
+        <Condition>proxy.pathsuffix != "/oauth/token" and proxy.pathsuffix != "/jwt/verify" and request.verb != "OPTIONS"</Condition>
+      </Step>
+      <!-- 8. Strip BOTH credentials so neither reaches a backend. ONLY for backend-bound
+              requests — never for /oauth/token (Basic client creds) or /jwt/verify (the
+              bearer JWT to validate), whose flows still need the Authorization header. -->
+      <Step><Name>AM-StripCreds</Name><Condition>flow.backend = "a" or flow.backend = "b" or flow.backend = "c"</Condition></Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+
+  <!-- ================= CONDITIONAL FLOWS ================= -->
+  <Flows>
+    <!-- OAuth2 token endpoint. Any verb enters (a non-POST fails cleanly in the policy
+         instead of returning an empty 200). No auth Step gates it. -->
+    <Flow name="GetAccessToken">
+      <Condition>proxy.pathsuffix = "/oauth/token"</Condition>
+      <Request><Step><Name>OA-GenerateAccessToken</Name></Step></Request>
+      <Response/>
+    </Flow>
+
+    <!-- JWT mint (protected by PreFlow authn). -->
+    <Flow name="JwtMint">
+      <Condition>proxy.pathsuffix = "/jwt/mint"</Condition>
+      <Request>
+        <Step><Name>AM-SetJwtSecret</Name></Step>
+        <Step><Name>GenerateJWT-HS256</Name></Step>
+        <Step><Name>AM-JwtMintResponse</Name></Step>
+      </Request>
+      <Response/>
+    </Flow>
+
+    <!-- JWT verify (open; validates the presented bearer JWT). -->
+    <Flow name="JwtVerify">
+      <Condition>proxy.pathsuffix = "/jwt/verify"</Condition>
+      <Request>
+        <Step><Name>AM-SetJwtSecret</Name></Step>
+        <Step><Name>VerifyJWT-HS256</Name></Step>
+        <Step><Name>AM-JwtVerifyResponse</Name></Step>
+      </Request>
+      <Response/>
+    </Flow>
+
+    <!-- No backend resolved and not a local endpoint => clean 404. -->
+    <Flow name="NotFound">
+      <Condition>flow.backend = "none" and proxy.pathsuffix != "/oauth/token" and !(proxy.pathsuffix MatchesPath "/jwt/mint") and !(proxy.pathsuffix MatchesPath "/jwt/verify") and request.verb != "OPTIONS"</Condition>
+      <Request><Step><Name>RF-NotFound</Name></Step></Request>
+      <Response/>
+    </Flow>
+  </Flows>
+
+  <HTTPProxyConnection>
+    <BasePath>/sni-router</BasePath>
+  </HTTPProxyConnection>
+
+  <!-- ================= ROUTING (top-down, first match wins) =================
+       Every rule keys on flow.backend (already precedence-resolved by JS), so routing
+       and authorization use the SAME decision. NoRouteLocal + default (both targetless)
+       return the locally-built /oauth, /jwt and 404 responses. -->
+  <RouteRule name="NoRouteLocal">
+    <Condition>proxy.pathsuffix = "/oauth/token" or proxy.pathsuffix MatchesPath "/jwt/**" or request.verb = "OPTIONS"</Condition>
+  </RouteRule>
+  <RouteRule name="RouteBackendA">
+    <Condition>flow.backend = "a"</Condition>
+    <TargetEndpoint>httpbin-target</TargetEndpoint>
+  </RouteRule>
+  <RouteRule name="RouteBackendB">
+    <Condition>flow.backend = "b"</Condition>
+    <TargetEndpoint>postman-target</TargetEndpoint>
+  </RouteRule>
+  <RouteRule name="RouteBackendC">
+    <Condition>flow.backend = "c"</Condition>
+    <TargetEndpoint>mocktarget-target</TargetEndpoint>
+  </RouteRule>
+  <RouteRule name="default"/>
+
+  <!-- ================= FAULT HANDLING =================
+       ProxyEndpoint FaultRules evaluate BOTTOM-TO-TOP: quota-fault (last) is checked
+       first; auth-fault (first) is checked last. -->
+  <FaultRules>
+    <FaultRule name="auth-fault">
+      <Step><Name>AM-Fault-Auth</Name></Step>
+      <Condition>(fault.name = "FailedToResolveAPIKey") or (fault.name = "InvalidApiKey") or (fault.name = "invalid_access_token") or (fault.name = "InvalidAccessToken") or (fault.name = "access_token_expired") or (fault.name = "invalid_request") or (fault.name = "InvalidClientIdentifier") or (oauthV2.OA-VerifyAccessToken.failed = true) or (oauthV2.VerifyAPIKey.failed = true)</Condition>
+    </FaultRule>
+    <FaultRule name="authz-fault">
+      <Step><Name>AM-Fault-Authz</Name></Step>
+      <Condition>(fault.name = "InvalidApiKeyForGivenResource") or (fault.name = "InsufficientScope") or (fault.name = "InvalidApiCallAsNoApiProductMatchFound") or (fault.name Matches "*NoApiProductMatch*") or (oauthV2.OA-VerifyScope-A.failed = true) or (oauthV2.OA-VerifyScope-B.failed = true) or (oauthV2.OA-VerifyScope-C.failed = true)</Condition>
+    </FaultRule>
+    <FaultRule name="authz-raise">
+      <Step><Name>AM-Fault-Authz</Name></Step>
+      <Condition>(raisefault.RF-BackendDenied.failed = true)</Condition>
+    </FaultRule>
+    <FaultRule name="notfound-raise">
+      <Step><Name>AM-NotFound</Name></Step>
+      <Condition>(raisefault.RF-NotFound.failed = true)</Condition>
+    </FaultRule>
+    <FaultRule name="jwt-fault">
+      <Step><Name>AM-Fault-JWT</Name></Step>
+      <Condition>(fault.name Matches "*Jwt*") or (fault.name = "InvalidToken") or (fault.name = "TokenExpired") or (fault.name = "FailedToDecode") or (fault.name = "InvalidClaim") or (fault.name = "InvalidJsonFormat") or (fault.name = "TokenNotYetValid") or (fault.name = "InvalidSignature")</Condition>
+    </FaultRule>
+    <FaultRule name="threat-fault">
+      <Step><Name>AM-Fault-Threat</Name></Step>
+      <Condition>(jsonattack.JTP-JSONThreat.failed = "true") or (fault.name Matches "*JSONThreat*") or (fault.name = "SourceUnavailable")</Condition>
+    </FaultRule>
+    <FaultRule name="spike-fault">
+      <Step><Name>AM-Fault-Spike</Name></Step>
+      <Condition>(fault.name = "SpikeArrestViolation")</Condition>
+    </FaultRule>
+    <FaultRule name="quota-fault">
+      <Step><Name>AM-Fault-Quota</Name></Step>
+      <Condition>(fault.name = "QuotaViolation")</Condition>
+    </FaultRule>
+  </FaultRules>
+  <DefaultFaultRule name="default-fault">
+    <Step><Name>AM-Fault-Generic</Name></Step>
+  </DefaultFaultRule>
+
+  <PostFlow name="PostFlow"><Request/><Response/></PostFlow>
+</ProxyEndpoint>

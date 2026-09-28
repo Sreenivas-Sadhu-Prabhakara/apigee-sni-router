@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Disable copying the proxy path suffix onto the target request via the RUNTIME
+     VARIABLE (the HTTPTargetConnection <Property name="copy.pathsuffix"> is ignored on
+     Apigee X). Ensures each backend is hit at its exact pinned endpoint (e.g. /get,
+     /json, /anything) regardless of the inbound path. Runs in each target's PreFlow. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-NoPathSuffix">
+  <DisplayName>AM-NoPathSuffix</DisplayName>
+  <AssignVariable>
+    <Name>target.copy.pathsuffix</Name>
+    <Value>false</Value>
+  </AssignVariable>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

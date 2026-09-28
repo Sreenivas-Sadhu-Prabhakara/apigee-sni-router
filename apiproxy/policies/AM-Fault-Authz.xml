@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 403 for authorization failures: valid credential, wrong resource/scope.
+     Covers oauth.v2.InvalidApiKeyForGivenResource (API key not allowed on this
+     path by its Product), InsufficientScope, and OAuth product-mismatch. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-Authz">
+  <DisplayName>AM-Fault-Authz</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"forbidden","message":"Your application is authenticated but not authorized for this backend/scope.","code":403,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>403</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

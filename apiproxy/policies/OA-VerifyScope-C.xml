@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Scope authorization for backend C. Requires scope "read:c". -->
+<OAuthV2 continueOnError="false" enabled="true" name="OA-VerifyScope-C">
+  <DisplayName>OA-VerifyScope-C</DisplayName>
+  <Operation>VerifyAccessToken</Operation>
+  <Scope>read:c</Scope>
+  <ExternalAuthorization>false</ExternalAuthorization>
+  <GenerateResponse enabled="false"/>
+</OAuthV2>

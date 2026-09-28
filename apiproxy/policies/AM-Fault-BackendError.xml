@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- 502 for TargetEndpoint (backend transport) failures: DNS, TLS, timeout, connect.
+     Note: backend 4xx/5xx bodies pass through untouched because each target sets
+     success.codes=1xx..5xx; this fires only on real transport-level failures. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-Fault-BackendError">
+  <DisplayName>AM-Fault-BackendError</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"error":"bad_gateway","message":"The upstream backend is unreachable or failed at the transport layer.","code":502,"errorcode":"{fault.name}"}</Payload>
+    <StatusCode>502</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

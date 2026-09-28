@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "SNI Routing via Apigee",
+    "_postman_id": "sni-apigee-routing-0001",
+    "description": "Tests the SNI-based routing proxy ON APIGEE (sni-router-v1 @ {{baseUrl}}{{basePath}}). Exercises the 3 routing modes (path, X-Route header, Host/virtual-host) to 3 backends [A=httpbin.org, B=httpbingo.org, C=mocktarget.apigee.net] plus the auth stack (API key, OAuth2, JWT), quota and CORS. Backend traffic flows Apigee -> PSC -> internal App LB -> Internet NEG -> origin, so backend Host is the LB IP; assertions key on each origin's distinctive echo shape, not on its hostname. Set appAKey/appBKey/appAllKey/appAllSecret from .secrets.env (or use the pre-filled *.local environment). Run OAuth2 + JWT folders first so {{accessToken}}/{{jwt}} populate.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        { "name": "No credentials -> 401", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }],
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}{{basePath}}/a" } },
+        { "name": "API key (app-a) on /a -> 200", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAKey}}" }], "url": "{{baseUrl}}{{basePath}}/a" } },
+        { "name": "app-a on /b -> 403 (not authorized)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('403', () => pm.response.to.have.status(403));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAKey}}" }], "url": "{{baseUrl}}{{basePath}}/b" } }
+      ]
+    },
+    {
+      "name": "2. Routing modes -> 3 backends",
+      "item": [
+        { "name": "PATH /a  -> backend A (httpbin)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('reached httpbin (echoes \"files\")', () => pm.expect(pm.response.text()).to.include('\"files\"'));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }], "url": "{{baseUrl}}{{basePath}}/a" } },
+        { "name": "PATH /b  -> backend B (httpbingo)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('reached httpbingo (Fly.io-hosted)', () => pm.expect(pm.response.text()).to.include('fly.io'));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }], "url": "{{baseUrl}}{{basePath}}/b" } },
+        { "name": "PATH /c  -> backend C (mocktarget)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('reached mocktarget (firstName)', () => pm.expect(pm.response.text()).to.include('firstName'));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }], "url": "{{baseUrl}}{{basePath}}/c" } },
+        { "name": "HEADER X-Route: c -> backend C", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('routed to mocktarget by header', () => pm.expect(pm.response.text()).to.include('firstName'));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }, { "key": "X-Route", "value": "c" }], "url": "{{baseUrl}}{{basePath}}/route" } },
+        { "name": "HOST api-a.* -> backend A (virtual-host)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('routed to httpbin by Host', () => pm.expect(pm.response.text()).to.include('\"files\"'));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }, { "key": "Host", "value": "api-a.8-232-203-178.nip.io" }], "url": "{{baseUrl}}{{basePath}}/route", "description": "Needs the api-a/b/c env-group hostnames (scripts/40-add-hostnames.sh). Postman: disable SSL verification (the trial cert only covers the base host)." } }
+      ]
+    },
+    {
+      "name": "3. OAuth2 (client_credentials)",
+      "item": [
+        { "name": "Get access token (Basic app-all)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "const t = pm.response.json().access_token;", "pm.expect(t).to.be.a('string');", "pm.environment.set('accessToken', t);"] } }],
+          "request": { "method": "POST", "auth": { "type": "basic", "basic": [{ "key": "username", "value": "{{appAllKey}}" }, { "key": "password", "value": "{{appAllSecret}}" }] }, "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }], "body": { "mode": "urlencoded", "urlencoded": [{ "key": "grant_type", "value": "client_credentials" }, { "key": "scope", "value": "read:a read:b read:c" }] }, "url": "{{baseUrl}}{{basePath}}/oauth/token" } },
+        { "name": "Bearer token on /a -> 200", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 (scope read:a)', () => pm.response.to.have.status(200));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}{{basePath}}/a" } }
+      ]
+    },
+    {
+      "name": "4. JWT (HS256)",
+      "item": [
+        { "name": "Mint JWT (app-all)", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.environment.set('jwt', pm.response.json().access_token);"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }], "url": "{{baseUrl}}{{basePath}}/jwt/mint" } },
+        { "name": "Verify JWT -> 200", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }], "url": "{{baseUrl}}{{basePath}}/jwt/verify" } },
+        { "name": "Verify garbage JWT -> 401", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('401', () => pm.response.to.have.status(401));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer not.a.jwt" }], "url": "{{baseUrl}}{{basePath}}/jwt/verify" } }
+      ]
+    },
+    {
+      "name": "5. Limits & CORS",
+      "item": [
+        { "name": "Unknown path -> 404", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('404', () => pm.response.to.have.status(404));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAllKey}}" }], "url": "{{baseUrl}}{{basePath}}/nope" } },
+        { "name": "Quota (send 6x fast, app-a) -> 429", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 or 429', () => pm.expect([200,429]).to.include(pm.response.code));"] } }],
+          "request": { "method": "GET", "header": [{ "key": "X-API-Key", "value": "{{appAKey}}" }], "url": "{{baseUrl}}{{basePath}}/a", "description": "product-a quota = 5/min. Send 6x within a minute; the 6th returns 429." } },
+        { "name": "CORS preflight OPTIONS -> 200", "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200', () => pm.response.to.have.status(200));", "pm.test('ACAO header', () => pm.expect(pm.response.headers.has('Access-Control-Allow-Origin')).to.be.true);"] } }],
+          "request": { "method": "OPTIONS", "header": [{ "key": "Origin", "value": "https://example.com" }, { "key": "Access-Control-Request-Method", "value": "GET" }], "url": "{{baseUrl}}{{basePath}}/a" } }
+      ]
+    }
+  ]
+}

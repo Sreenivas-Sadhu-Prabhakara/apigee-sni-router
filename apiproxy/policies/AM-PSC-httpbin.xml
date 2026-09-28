@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Route backend A via PSC: /anything path -> neg-httpbin. Host stamped for correctness. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-PSC-httpbin">
+  <DisplayName>AM-PSC-httpbin</DisplayName>
+  <AssignVariable><Name>target.url</Name><Value>https://httpbin.org/anything</Value></AssignVariable>
+  <Set>
+    <Headers><Header name="Host">httpbin.org</Header></Headers>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

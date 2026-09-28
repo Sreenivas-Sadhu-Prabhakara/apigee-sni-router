@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Returns the freshly minted JWT as a JSON response at /jwt/mint. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-JwtMintResponse">
+  <DisplayName>AM-JwtMintResponse</DisplayName>
+  <Set>
+    <Payload contentType="application/json">{"token_type":"Bearer","alg":"HS256","expires_in":3600,"access_token":"{jwt.generated}"}</Payload>
+    <StatusCode>200</StatusCode>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

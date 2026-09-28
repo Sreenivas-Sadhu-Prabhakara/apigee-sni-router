@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Generic bearer-token authn used in PreFlow for non-key requests.
+     Reads the token from "Authorization: Bearer <token>" by default.
+     GenerateResponse=false so failures propagate to our FaultRules (clean JSON)
+     instead of the built-in OAuth error body. Per-route scope checks are done by
+     the OA-VerifyScope-* policies. -->
+<OAuthV2 continueOnError="false" enabled="true" name="OA-VerifyAccessToken">
+  <DisplayName>OA-VerifyAccessToken</DisplayName>
+  <Operation>VerifyAccessToken</Operation>
+  <ExternalAuthorization>false</ExternalAuthorization>
+  <GenerateResponse enabled="false"/>
+</OAuthV2>

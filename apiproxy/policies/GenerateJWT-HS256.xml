@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Mints a self-contained HS256 JWT (no external IdP). Subject->sub, Issuer->iss,
+     Audience->aud, ExpiresIn->exp (iat + jti auto-added). GenerateJWT sets no flow
+     variables; the token lands in <OutputVariable> (jwt.generated). -->
+<GenerateJWT continueOnError="false" enabled="true" name="GenerateJWT-HS256">
+  <DisplayName>GenerateJWT-HS256</DisplayName>
+  <Algorithm>HS256</Algorithm>
+  <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
+  <SecretKey>
+    <Value ref="private.secretkey"/>
+  </SecretKey>
+  <Subject>sni-router-demo-subject</Subject>
+  <Issuer>urn://sni-router</Issuer>
+  <Audience>sni-router-clients</Audience>
+  <ExpiresIn>1h</ExpiresIn>
+  <AdditionalClaims>
+    <Claim name="role">demo</Claim>
+  </AdditionalClaims>
+  <OutputVariable>jwt.generated</OutputVariable>
+</GenerateJWT>

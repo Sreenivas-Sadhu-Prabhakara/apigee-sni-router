@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Raised when an API-key request targets a backend its API Product does not allow.
+     The allowed set comes from the Product's custom attribute "backends" (e.g. "a" or
+     "a,b,c"), exposed as verifyapikey.VerifyAPIKey.apiproduct.backends. This is the
+     API-key equivalent of OAuth scope enforcement and binds authz to flow.backend
+     (the routed target), not to the request path. The 403 body is built by the
+     authz-raise FaultRule so the DefaultFaultRule can't overwrite it. -->
+<RaiseFault continueOnError="false" enabled="true" name="RF-BackendDenied">
+  <DisplayName>RF-BackendDenied</DisplayName>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <FaultResponse/>
+</RaiseFault>

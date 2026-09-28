@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Route backend C via PSC: /json path -> neg-mocktgt. Host stamped for correctness. -->
+<AssignMessage continueOnError="false" enabled="true" name="AM-PSC-mocktgt">
+  <DisplayName>AM-PSC-mocktgt</DisplayName>
+  <AssignVariable><Name>target.url</Name><Value>https://mocktarget.apigee.net/json</Value></AssignVariable>
+  <Set>
+    <Headers><Header name="Host">mocktarget.apigee.net</Header></Headers>
+  </Set>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

@@ -1,0 +1,35 @@
+{
+  "info": {
+    "name": "L4 SNI Router (proxy NLB, TLS-passthrough)",
+    "_postman_id": "sni-l4-router-0001",
+    "description": "Tests the standalone L4 SNI router (regional proxy Network LB + TLS routes, TLS-passthrough) at the PUBLIC VIP {{vip}}. Routing is purely by TLS SNI to 3 backends: httpbin.org / httpbingo.org / mocktarget.apigee.net. This is L4 (no HTTP/auth layer) — the origin's own TLS cert is validated end-to-end.\n\nIMPORTANT — Postman/browsers can't do curl's --resolve, and a pure SNI router routes on the ClientHello SNI, so you MUST point the 3 hostnames at the VIP first. On the machine running Postman add to /etc/hosts (sudo):\n\n    {{vip}}  httpbin.org httpbingo.org mocktarget.apigee.net\n\nThen requests below hit the VIP with SNI=Host=<that hostname> and get routed. REMOVE those /etc/hosts lines when done (else all traffic to those hosts goes through the LB). In Postman Settings, keep SSL verification ON — the origin's real cert is served end-to-end, so it validates against the hostname.\n\ncurl alternative (no /etc/hosts, preferred):\n  curl --resolve httpbin.org:443:{{vip}} https://httpbin.org/anything\n  curl --resolve httpbingo.org:443:{{vip}} https://httpbingo.org/get\n  curl --resolve mocktarget.apigee.net:443:{{vip}} https://mocktarget.apigee.net/json",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SNI httpbin.org -> backend A",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200', () => pm.response.to.have.status(200));",
+        "pm.test('reached httpbin (echoes \"files\")', () => pm.expect(pm.response.text()).to.include('\"files\"'));"
+      ] } }],
+      "request": { "method": "GET", "header": [], "url": "https://httpbin.org/anything",
+        "description": "SNI=httpbin.org -> TLS route -> backend A. httpbin.org resolves to the VIP via /etc/hosts." }
+    },
+    {
+      "name": "SNI httpbingo.org -> backend B",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200', () => pm.response.to.have.status(200));",
+        "pm.test('reached httpbingo (Fly.io)', () => pm.expect(pm.response.text()).to.include('fly.io'));"
+      ] } }],
+      "request": { "method": "GET", "header": [], "url": "https://httpbingo.org/get" }
+    },
+    {
+      "name": "SNI mocktarget.apigee.net -> backend C",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200', () => pm.response.to.have.status(200));",
+        "pm.test('reached mocktarget (firstName)', () => pm.expect(pm.response.text()).to.include('firstName'));"
+      ] } }],
+      "request": { "method": "GET", "header": [], "url": "https://mocktarget.apigee.net/json" }
+    }
+  ]
+}

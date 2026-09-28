@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- API-key authentication. Key travels in the X-API-Key header (good practice
+     vs. query param). Authorization (which paths this key may reach) is NOT here
+     - it lives in the API Product's resource paths, matched at runtime against
+     proxy.pathsuffix. A valid key on a disallowed path => oauth.v2.InvalidApiKeyForGivenResource. -->
+<VerifyAPIKey continueOnError="false" enabled="true" name="VerifyAPIKey">
+  <DisplayName>VerifyAPIKey</DisplayName>
+  <APIKey ref="request.header.x-api-key"/>
+</VerifyAPIKey>
